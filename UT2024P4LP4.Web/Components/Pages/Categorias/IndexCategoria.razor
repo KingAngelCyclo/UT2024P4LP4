@@ -1,0 +1,153 @@
+﻿@rendermode InteractiveServer
+@attribute [StreamRendering]
+@page "/categoria"
+
+<h3 >Categoria</h3>
+@if (ShowForm)
+{
+    <div class="card">
+        <h5 class="card-header">@Accion categoria</h5>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input @bind-value="MiCategoria.Nombre" type="text" class="form-control" id="nombre" placeholder="Nombre" disabled="@DisableInputs">
+            </div>
+        </div>
+        <div class="mb-3">
+            <span class="btn btn-primary" @onclick="Aceptar">Aceptar</span>
+            <span class="btn btn-danger" @onclick="btnCancelarClick">Cancelar</span>
+        </div>
+    </div>
+   
+}
+else
+{
+    @if (CategotiaList != null)
+    {
+        <div class="card mb-3 mt-3">
+            <div class="card-header">
+                <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                    <span class="btn btn-success" @onclick="NavigateToPage">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-left" viewBox="0 0 16 16">
+                            <path d="M10 12.796V3.204L4.519 8zm-.659.753-5.48-4.796a1 1 0 0 1 0-1.506l5.48-4.796A1 1 0 0 1 11 3.204v9.592a1 1 0 0 1-1.659.753" />
+                        </svg>
+                    </span>
+                    <span class="btn btn-success" @onclick="btnAgregarClick">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Aciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (CategotiaList.Count > 0)
+                        {
+                            @foreach (var p in CategotiaList)
+                            {
+                                <tr>
+                                    <th scope="row">@p.Id</th>
+                                    <td>@p.Nombre</td>
+                                    <td>
+                                        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                                            <span @onclick="()=>btnEditarClick(p)" class="btn btn-outline-warning">Editar</span>
+                                            <span @onclick="()=>btnEliminarClick(p)" class="btn btn-outline-danger">Eliminar</span> 
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>Cargando...</p>
+    }
+}
+@code {
+    public string Accion { get; set; } = "Registrar";
+    public CategoriaRequest MiCategoria { get; set; } = new();
+    public List<CategoriaDto>? CategotiaList { get; set; }
+    bool ShowForm = false, DisableInputs = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Consultar();
+    }
+
+    public void btnAgregarClick()
+    {
+        Accion = Constants.Acciones.Registrar;
+        ShowForm = true;
+        StateHasChanged();
+        DisableInputs = false;
+
+    }
+    public void btnEditarClick(CategoriaDto dto)
+    {
+        Accion = Constants.Acciones.Modificar;
+        ShowForm = true;
+        DisableInputs = false;
+        MiCategoria = dto.ToRequest();
+
+
+    }
+    public void btnEliminarClick(CategoriaDto dto)
+    {
+        Accion = Constants.Acciones.Eliminar;
+        ShowForm = true;
+        DisableInputs = true;
+        MiCategoria = dto.ToRequest();
+
+
+    }
+    public void btnCancelarClick()
+    {
+        Limpiar();
+
+    }
+    void NavigateToPage()
+    {
+        Navigation.NavigateTo("/productos");
+    }
+    async Task Consultar()
+    {
+        var result = await service.Get();
+        if (result.Succesd)
+        {
+            CategotiaList =
+            result.Data?.ToList()
+            ??
+            new List<CategoriaDto>();
+        }
+    }
+    public void Limpiar()
+    {
+        ShowForm = false;
+        MiCategoria = new();
+    }
+    public async Task Aceptar()
+    {
+        Result r =
+        Accion == Constants.Acciones.Registrar ? await service.Create(MiCategoria) :
+        Accion == Constants.Acciones.Modificar ? await service.Update(MiCategoria) :
+        Accion == Constants.Acciones.Eliminar ? await service.Delete(MiCategoria.Id) :
+        Result.Failure("Accion no soportada");
+        if (r.Succesd)
+        {
+            await Consultar();
+            Limpiar();
+        }
+    }
+}
